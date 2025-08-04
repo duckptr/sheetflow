@@ -5,7 +5,7 @@ import 'package:path/path.dart';
 
 class FileService {
   // ⛳️ FastAPI 서버 주소
-  static const String _baseUrl = 'http://localhost:8000'; // 필요 시 변경
+  static const String _baseUrl = 'http://10.1.25.127:8000'; // 필요 시 변경
 
   static Future<Map<String, dynamic>?> uploadExcelFile(File file) async {
     try {

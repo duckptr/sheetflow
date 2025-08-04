@@ -52,6 +52,8 @@ class _UploadPageState extends State<UploadPage> {
 
   @override
   Widget build(BuildContext context) {
+    final previewList = _analysisResult?['preview'];
+
     return Scaffold(
       appBar: AppBar(title: const Text('엑셀 업로드 및 중복 분석')),
       body: Padding(
@@ -84,19 +86,23 @@ class _UploadPageState extends State<UploadPage> {
               const Divider(),
               const Text("🧾 중복 미리보기:", style: TextStyle(fontWeight: FontWeight.bold)),
               const SizedBox(height: 10),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: _analysisResult!['preview'].length,
-                  itemBuilder: (context, index) {
-                    final row = _analysisResult!['preview'][index];
-                    return ListTile(
-                      title: Text(row.toString()),
-                      dense: true,
-                      tileColor: index % 2 == 0 ? Colors.grey[100] : null,
-                    );
-                  },
+              if (previewList != null && previewList is List && previewList.isNotEmpty) ...[
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: previewList.length,
+                    itemBuilder: (context, index) {
+                      final row = previewList[index];
+                      return ListTile(
+                        title: Text(row.toString()),
+                        dense: true,
+                        tileColor: index % 2 == 0 ? Colors.grey[100] : null,
+                      );
+                    },
+                  ),
                 ),
-              ),
+              ] else ...[
+                const Text("⚠️ 미리볼 중복 항목이 없습니다.")
+              ]
             ]
           ],
         ),
