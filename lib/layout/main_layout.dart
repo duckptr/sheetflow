@@ -19,21 +19,47 @@ class _MainLayoutState extends State<MainLayout> {
     '정제된 데이터 미리보기',
   ];
 
-  final List<NavigationRailDestination> _destinations = const [
+  final List<NavigationRailDestination> _destinations = [
     NavigationRailDestination(
-      icon: Icon(Icons.upload_file),
-      label: Text('업로드'),
+      icon: Tooltip(
+        message: '업로드',
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Icon(Icons.upload_file_outlined),
+        ),
+      ),
+      selectedIcon: Tooltip(
+        message: '업로드',
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Icon(Icons.upload_file),
+        ),
+      ),
+      label: const Text('업로드'),
     ),
     NavigationRailDestination(
-      icon: Icon(Icons.preview),
-      label: Text('미리보기'),
+      icon: Tooltip(
+        message: '미리보기',
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Icon(Icons.preview_outlined),
+        ),
+      ),
+      selectedIcon: Tooltip(
+        message: '미리보기',
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: Icon(Icons.preview),
+        ),
+      ),
+      label: const Text('미리보기'),
     ),
   ];
 
   void _handleRefinedData(List<Map<String, dynamic>> data) {
     setState(() {
       _refinedData = data;
-      _selectedIndex = 1; // 자동으로 미리보기 탭으로 전환
+      _selectedIndex = 1;
     });
   }
 
@@ -47,22 +73,15 @@ class _MainLayoutState extends State<MainLayout> {
     return Scaffold(
       body: Row(
         children: [
-          /// ✅ Sidebar
+          /// ✅ Sidebar 개선 (슬림한 스타일 + 툴팁 + 호버 효과)
           Container(
-            width: 220,
+            width: 100,
             color: const Color(0xFF1E1E2D),
             child: Column(
               children: [
-                const SizedBox(height: 40),
-                const Text(
-                  '📊 SheetFlow',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 32),
+                const Icon(Icons.dashboard_customize, color: Colors.white, size: 28),
+                const SizedBox(height: 24),
                 const Divider(color: Colors.white24),
                 Expanded(
                   child: NavigationRail(
@@ -71,17 +90,17 @@ class _MainLayoutState extends State<MainLayout> {
                     onDestinationSelected: (index) {
                       setState(() => _selectedIndex = index);
                     },
-                    labelType: NavigationRailLabelType.all,
-                    selectedIconTheme: const IconThemeData(color: Colors.white),
-                    unselectedIconTheme: const IconThemeData(color: Colors.white38),
-                    selectedLabelTextStyle: const TextStyle(color: Colors.white),
-                    unselectedLabelTextStyle: const TextStyle(color: Colors.white70),
+                    labelType: NavigationRailLabelType.none,
+                    useIndicator: true,
+                    groupAlignment: -1.0,
+                    selectedIconTheme: const IconThemeData(color: Colors.white, size: 26),
+                    unselectedIconTheme: const IconThemeData(color: Colors.white38, size: 22),
                     destinations: _destinations,
                   ),
                 ),
                 const SizedBox(height: 20),
                 const Text(
-                  '© 2025 SheetFlow',
+                  '© 2025',
                   style: TextStyle(fontSize: 12, color: Colors.white38),
                 ),
                 const SizedBox(height: 16),

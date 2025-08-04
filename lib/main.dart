@@ -1,7 +1,20 @@
 import 'package:flutter/material.dart';
+import 'dart:io';
+import 'package:window_size/window_size.dart';
+
 import 'layout/main_layout.dart'; // 사이드바 포함된 메인 레이아웃
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // 데스크탑 환경에서만 창 크기 고정
+  if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
+    const windowSize = Size(1000, 720);
+    setWindowTitle('SheetFlow');
+    setWindowMinSize(windowSize);
+    setWindowMaxSize(windowSize);
+  }
+
   runApp(const SheetflowApp());
 }
 
@@ -20,7 +33,7 @@ class SheetflowApp extends StatelessWidget {
           brightness: Brightness.light,
         ),
         scaffoldBackgroundColor: const Color(0xFFF6F8FA),
-        fontFamily: 'Roboto', // 시스템 폰트 or 원하는 폰트
+        fontFamily: 'JalnanGothic', // ✅ 여기서 폰트 적용
       ),
       home: const MainLayout(),
     );
