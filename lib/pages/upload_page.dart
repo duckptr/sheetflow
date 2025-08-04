@@ -1,4 +1,3 @@
-// upload_page.dart
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'dart:io';
@@ -14,6 +13,7 @@ class UploadPage extends StatefulWidget {
 class _UploadPageState extends State<UploadPage> {
   File? _selectedFile;
   String? _statusMessage;
+  Map<String, dynamic>? _analysisResult;
 
   Future<void> _pickExcelFile() async {
     final result = await FilePicker.platform.pickFiles(
@@ -25,6 +25,7 @@ class _UploadPageState extends State<UploadPage> {
       setState(() {
         _selectedFile = File(result.files.single.path!);
         _statusMessage = null;
+        _analysisResult = null;
       });
     }
   }
@@ -32,39 +33,73 @@ class _UploadPageState extends State<UploadPage> {
   Future<void> _uploadFile() async {
     if (_selectedFile == null) return;
 
-    setState(() => _statusMessage = '업로드 중...');
+    setState(() {
+      _statusMessage = '업로드 중...';
+      _analysisResult = null;
+    });
 
-    final success = await FileService.uploadExcelFile(_selectedFile!);
+    final result = await FileService.uploadExcelFile(_selectedFile!);
 
     setState(() {
-      _statusMessage = success ? '✅ 업로드 성공!' : '❌ 업로드 실패';
+      if (result != null) {
+        _statusMessage = '✅ 업로드 및 분석 완료';
+        _analysisResult = result;
+      } else {
+        _statusMessage = '❌ 업로드 실패';
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          ElevatedButton.icon(
-            onPressed: _pickExcelFile,
-            icon: const Icon(Icons.folder_open),
-            label: const Text('엑셀 파일 선택'),
-          ),
-          const SizedBox(height: 16),
-          if (_selectedFile != null)
-            Text('선택된 파일: ${_selectedFile!.path.split("/").last}'),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _selectedFile != null ? _uploadFile : null,
-            child: const Text('FastAPI로 업로드'),
-          ),
-          const SizedBox(height: 16),
-          if (_statusMessage != null)
-            Text(_statusMessage!, style: const TextStyle(fontSize: 16)),
-        ],
+    return Scaffold(
+      appBar: AppBar(title: const Text('엑셀 업로드 및 중복 분석')),
+      body: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ElevatedButton.icon(
+              onPressed: _pickExcelFile,
+              icon: const Icon(Icons.folder_open),
+              label: const Text('엑셀 파일 선택'),
+            ),
+            const SizedBox(height: 12),
+            if (_selectedFile != null)
+              Text("선택한 파일: ${_selectedFile!.path.split(Platform.pathSeparator).last}"),
+            const SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: _uploadFile,
+              icon: const Icon(Icons.upload),
+              label: const Text('업로드 및 분석하기'),
+            ),
+            const SizedBox(height: 12),
+            if (_statusMessage != null)
+              Text(_statusMessage!, style: const TextStyle(fontWeight: FontWeight.bold)),
+
+            const SizedBox(height: 20),
+            if (_analysisResult != null) ...[
+              Text("📊 전체 행 수: ${_analysisResult!['total_rows']}"),
+              Text("⚠️ 중복 행 수: ${_analysisResult!['duplicated_rows']}"),
+              const Divider(),
+              const Text("🧾 중복 미리보기:", style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: _analysisResult!['preview'].length,
+                  itemBuilder: (context, index) {
+                    final row = _analysisResult!['preview'][index];
+                    return ListTile(
+                      title: Text(row.toString()),
+                      dense: true,
+                      tileColor: index % 2 == 0 ? Colors.grey[100] : null,
+                    );
+                  },
+                ),
+              ),
+            ]
+          ],
+        ),
       ),
     );
   }

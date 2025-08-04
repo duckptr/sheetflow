@@ -1,12 +1,13 @@
-// file_service.dart
 import 'dart:io';
+import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart';
 
 class FileService {
-  static const String _baseUrl = 'http://localhost:8000'; // FastAPI 주소
+  // ⛳️ FastAPI 서버 주소
+  static const String _baseUrl = 'http://localhost:8000'; // 필요 시 변경
 
-  static Future<bool> uploadExcelFile(File file) async {
+  static Future<Map<String, dynamic>?> uploadExcelFile(File file) async {
     try {
       final uri = Uri.parse('$_baseUrl/upload');
 
@@ -20,10 +21,18 @@ class FileService {
         );
 
       final response = await request.send();
-      return response.statusCode == 200;
+
+      if (response.statusCode == 200) {
+        final responseBody = await response.stream.bytesToString();
+        final jsonResult = jsonDecode(responseBody);
+
+        return jsonResult['result']; // FastAPI에서 반환하는 분석 결과
+      } else {
+        print('❌ 업로드 실패: ${response.statusCode}');
+      }
     } catch (e) {
-      print('업로드 오류: $e');
-      return false;
+      print('🚨 업로드 오류: $e');
     }
+    return null;
   }
 }

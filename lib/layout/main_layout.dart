@@ -1,8 +1,5 @@
-// sheetflow: Flutter desktop main layout with sidebar and routing
-
 import 'package:flutter/material.dart';
 import '../pages/upload_page.dart';
-import '../pages/analysis_page.dart';
 import '../pages/preview_page.dart';
 
 class MainLayout extends StatefulWidget {
@@ -13,11 +10,10 @@ class MainLayout extends StatefulWidget {
 }
 
 class _MainLayoutState extends State<MainLayout> {
-  int? _selectedIndex; // null일 때는 비어 있는 초기 화면
+  int? _selectedIndex;
 
   final List<Widget> _pages = [
     const UploadPage(),
-    const AnalysisPage(),
     const PreviewPage(),
   ];
 
@@ -25,10 +21,6 @@ class _MainLayoutState extends State<MainLayout> {
     NavigationRailDestination(
       icon: Icon(Icons.upload_file),
       label: Text('파일 업로드'),
-    ),
-    NavigationRailDestination(
-      icon: Icon(Icons.search),
-      label: Text('데이터 분석'),
     ),
     NavigationRailDestination(
       icon: Icon(Icons.table_chart),
@@ -41,21 +33,38 @@ class _MainLayoutState extends State<MainLayout> {
     return Scaffold(
       body: Row(
         children: [
-          NavigationRail(
-            selectedIndex: _selectedIndex,
-            onDestinationSelected: (index) {
-              setState(() => _selectedIndex = index);
-            },
-            destinations: _destinations,
-            labelType: NavigationRailLabelType.all,
-            selectedIconTheme: const IconThemeData(color: Colors.indigo),
-            backgroundColor: Colors.grey[100],
-            leading: const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Text(
-                '📊 sheetflow',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+          // ✅ Sidebar with title + NavigationRail
+          Container(
+            width: 220,
+            color: Colors.grey[100],
+            child: Column(
+              children: [
+                const SizedBox(height: 24),
+                const Text(
+                  '📊 Sheetflow',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.indigo,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Divider(thickness: 1),
+                Expanded(
+                  child: NavigationRail(
+                    selectedIndex: _selectedIndex,
+                    onDestinationSelected: (index) {
+                      setState(() => _selectedIndex = index);
+                    },
+                    destinations: _destinations,
+                    labelType: NavigationRailLabelType.all,
+                    selectedIconTheme: const IconThemeData(color: Colors.indigo),
+                    unselectedIconTheme: const IconThemeData(color: Colors.grey),
+                    selectedLabelTextStyle: const TextStyle(color: Colors.indigo),
+                    backgroundColor: Colors.grey[100],
+                  ),
+                ),
+              ],
             ),
           ),
           const VerticalDivider(width: 1),
