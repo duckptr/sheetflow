@@ -71,13 +71,13 @@ class _UploadPageState extends State<UploadPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Summary 카드
           Wrap(
-            spacing: 16,
+            alignment: WrapAlignment.center,
+            spacing: 0,
             runSpacing: 16,
             children: [
               SizedBox(
-                width: 280,
+                width: 260,
                 child: SummaryCard(
                   title: '전체 행 수',
                   value: _analysisResult?['total_rows']?.toString() ?? '-',
@@ -85,8 +85,9 @@ class _UploadPageState extends State<UploadPage> {
                   color: Colors.indigo,
                 ),
               ),
-              SizedBox(
-                width: 280,
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 12),
+                width: 260,
                 child: SummaryCard(
                   title: '중복 행 수',
                   value: _analysisResult?['duplicated_rows']?.toString() ?? '-',
@@ -95,7 +96,7 @@ class _UploadPageState extends State<UploadPage> {
                 ),
               ),
               SizedBox(
-                width: 280,
+                width: 260,
                 child: SummaryCard(
                   title: '분석 상태',
                   value: _statusMessage ?? '대기 중',
@@ -110,7 +111,6 @@ class _UploadPageState extends State<UploadPage> {
 
           const SizedBox(height: 32),
 
-          // 조작 카드
           Wrap(
             spacing: 16,
             runSpacing: 16,
@@ -157,7 +157,6 @@ class _UploadPageState extends State<UploadPage> {
 
           const SizedBox(height: 32),
 
-          // 중복 미리보기
           if (_analysisResult != null) ...[
             const Text("🧾 중복 미리보기", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
@@ -184,7 +183,6 @@ class _UploadPageState extends State<UploadPage> {
 
           const SizedBox(height: 32),
 
-          // 시리얼 추적
           if (_groupedResult != null && _groupedResult!.isNotEmpty) ...[
             const Text("📦 제품코드별 시리얼 추적", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
@@ -236,7 +234,7 @@ class _UploadPageState extends State<UploadPage> {
                 style: const TextStyle(fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 16), // Spacer 대신
+              const SizedBox(height: 16),
               Center(
                 child: Tooltip(
                   message: tooltip,
@@ -255,7 +253,7 @@ class _UploadPageState extends State<UploadPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16), // Spacer 대신
+              const SizedBox(height: 16),
               if (footer != null)
                 Text(
                   footer,
