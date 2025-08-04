@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../pages/upload_page.dart';
 import '../pages/preview_page.dart';
 import 'topbar.dart';
+import '../layout/sidebar.dart'; // 📌 새 Sidebar 위젯 임포트
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -19,47 +20,10 @@ class _MainLayoutState extends State<MainLayout> {
     '정제된 데이터 미리보기',
   ];
 
-  final List<NavigationRailDestination> _destinations = [
-    NavigationRailDestination(
-      icon: Tooltip(
-        message: '업로드',
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: Icon(Icons.upload_file_outlined),
-        ),
-      ),
-      selectedIcon: Tooltip(
-        message: '업로드',
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: Icon(Icons.upload_file),
-        ),
-      ),
-      label: const Text('업로드'),
-    ),
-    NavigationRailDestination(
-      icon: Tooltip(
-        message: '미리보기',
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: Icon(Icons.preview_outlined),
-        ),
-      ),
-      selectedIcon: Tooltip(
-        message: '미리보기',
-        child: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: Icon(Icons.preview),
-        ),
-      ),
-      label: const Text('미리보기'),
-    ),
-  ];
-
   void _handleRefinedData(List<Map<String, dynamic>> data) {
     setState(() {
       _refinedData = data;
-      _selectedIndex = 1;
+      _selectedIndex = 1; // 업로드 후 자동으로 미리보기로 이동
     });
   }
 
@@ -73,42 +37,17 @@ class _MainLayoutState extends State<MainLayout> {
     return Scaffold(
       body: Row(
         children: [
-          /// ✅ Sidebar 개선 (슬림한 스타일 + 툴팁 + 호버 효과)
-          Container(
-            width: 100,
-            color: const Color(0xFF1E1E2D),
-            child: Column(
-              children: [
-                const SizedBox(height: 32),
-                const Icon(Icons.dashboard_customize, color: Colors.white, size: 28),
-                const SizedBox(height: 24),
-                const Divider(color: Colors.white24),
-                Expanded(
-                  child: NavigationRail(
-                    backgroundColor: const Color(0xFF1E1E2D),
-                    selectedIndex: _selectedIndex,
-                    onDestinationSelected: (index) {
-                      setState(() => _selectedIndex = index);
-                    },
-                    labelType: NavigationRailLabelType.none,
-                    useIndicator: true,
-                    groupAlignment: -1.0,
-                    selectedIconTheme: const IconThemeData(color: Colors.white, size: 26),
-                    unselectedIconTheme: const IconThemeData(color: Colors.white38, size: 22),
-                    destinations: _destinations,
-                  ),
-                ),
-                const SizedBox(height: 20),
-                const Text(
-                  '© 2025',
-                  style: TextStyle(fontSize: 12, color: Colors.white38),
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
+          /// ✅ 기존 NavigationRail 대신 Sidebar 사용
+          Sidebar(
+            selectedRoute: _selectedIndex == 0 ? '/upload' : '/preview',
+            onRouteSelected: (route) {
+              setState(() {
+                _selectedIndex = (route == '/upload') ? 0 : 1;
+              });
+            },
           ),
 
-          /// ✅ Main Area
+          /// ✅ 메인 영역
           Expanded(
             child: Scaffold(
               backgroundColor: const Color(0xFFF6F8FA),

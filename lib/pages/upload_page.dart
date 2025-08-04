@@ -76,7 +76,7 @@ class _UploadPageState extends State<UploadPage> {
     }
 
     setState(() {
-      _statusMessage = '정렬 중...';
+      _statusMessage = '정렬 중';
       _sortedPreview = null;
     });
 
@@ -101,7 +101,7 @@ class _UploadPageState extends State<UploadPage> {
     }
 
     setState(() {
-      _statusMessage = '파일 생성 중...';
+      _statusMessage = '파일 생성 중';
     });
 
     final fileBytes = await FileService.generateExcelFile(_selectedFile!);
@@ -127,6 +127,24 @@ class _UploadPageState extends State<UploadPage> {
         _statusMessage = '❌ 파일 생성 실패';
       });
     }
+  }
+
+  /// 📌 상태 표시 텍스트 간소화
+  String _getStatusShortText() {
+    if (_statusMessage == null) return '대기';
+    if (_statusMessage!.contains('중')) return '진행 중';
+    if (_statusMessage!.startsWith('✅')) return '완료';
+    if (_statusMessage!.startsWith('❌')) return '실패';
+    return '대기';
+  }
+
+  /// 📌 상태별 색상 반환
+  Color _getStatusColor() {
+    if (_statusMessage == null) return Colors.grey;
+    if (_statusMessage!.contains('중')) return Colors.blue;
+    if (_statusMessage!.startsWith('✅')) return Colors.green;
+    if (_statusMessage!.startsWith('❌')) return Colors.red;
+    return Colors.grey;
   }
 
   @override
@@ -166,11 +184,9 @@ class _UploadPageState extends State<UploadPage> {
                 width: 260,
                 child: SummaryCard(
                   title: '분석 상태',
-                  value: _statusMessage ?? '대기 중',
+                  value: _getStatusShortText(),
                   icon: Icons.check_circle,
-                  color: _statusMessage?.startsWith('✅') == true
-                      ? Colors.green
-                      : Colors.grey,
+                  color: _getStatusColor(),
                 ),
               ),
             ],
@@ -199,9 +215,7 @@ class _UploadPageState extends State<UploadPage> {
                 tooltip: "파일 업로드 및 분석",
                 onPressed: _uploadFile,
                 footer: _statusMessage ?? "분석을 시작하세요",
-                footerColor: _statusMessage?.startsWith('✅') == true
-                    ? Colors.green
-                    : (_statusMessage?.startsWith('❌') == true ? Colors.red : null),
+                footerColor: _getStatusColor(),
               ),
               _buildCard(
                 width: 196,

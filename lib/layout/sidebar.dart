@@ -13,40 +13,43 @@ class Sidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 220,
-      color: const Color(0xFF1E1E2D), // 어두운 배경
+      width: 250, 
+      color: const Color(0xFF1E1E2D),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const SizedBox(height: 40),
-          const Text(
-            'SheetFlow',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 24.0),
+            child: Text(
+              'MJ',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 28, // 좀 더 크게
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
-          const SizedBox(height: 30),
+          const SizedBox(height: 40),
+
           _buildNavItem(
-            icon: Icons.upload_file,
-            label: '업로드',
+            label: '📂 파일 업로드',
             route: '/upload',
           ),
           _buildNavItem(
-            icon: Icons.analytics,
-            label: '분석 결과',
+            label: '📊 분석 결과',
             route: '/analysis',
           ),
           _buildNavItem(
-            icon: Icons.preview,
-            label: '미리보기',
+            label: '🔍 미리보기',
             route: '/preview',
           ),
+
           const Spacer(),
           const Padding(
-            padding: EdgeInsets.only(bottom: 16.0),
+            padding: EdgeInsets.only(left: 24.0, bottom: 16.0),
             child: Text(
-              '© 2025 SheetFlow',
+              '© 2025 MJ',
               style: TextStyle(color: Colors.white70, fontSize: 12),
             ),
           ),
@@ -56,7 +59,6 @@ class Sidebar extends StatelessWidget {
   }
 
   Widget _buildNavItem({
-    required IconData icon,
     required String label,
     required String route,
   }) {
@@ -65,24 +67,19 @@ class Sidebar extends StatelessWidget {
     return InkWell(
       onTap: () => onRouteSelected(route),
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
           color: isSelected ? Colors.white10 : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.white),
-            const SizedBox(width: 12),
-            Text(
-              label,
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              ),
-            ),
-          ],
+        child: Text(
+          label,
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: 18,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+          ),
         ),
       ),
     );

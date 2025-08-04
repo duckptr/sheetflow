@@ -9,7 +9,7 @@ void main() async {
 
   // 데스크탑 환경에서만 창 크기 고정
   if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
-    const windowSize = Size(1000, 720);
+    const windowSize = Size(1150, 800);
     setWindowTitle('SheetFlow');
     setWindowMinSize(windowSize);
     setWindowMaxSize(windowSize);
