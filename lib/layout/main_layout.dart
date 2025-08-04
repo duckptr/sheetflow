@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../pages/upload_page.dart';
 import '../pages/preview_page.dart';
+import 'topbar.dart';
 
 class MainLayout extends StatefulWidget {
   const MainLayout({super.key});
@@ -10,73 +11,91 @@ class MainLayout extends StatefulWidget {
 }
 
 class _MainLayoutState extends State<MainLayout> {
-  int? _selectedIndex;
+  int _selectedIndex = 0;
+  List<Map<String, dynamic>> _refinedData = [];
 
-  final List<Widget> _pages = [
-    const UploadPage(),
-    const PreviewPage(),
+  final List<String> _titles = [
+    '파일 업로드',
+    '정제된 데이터 미리보기',
   ];
 
   final List<NavigationRailDestination> _destinations = const [
     NavigationRailDestination(
       icon: Icon(Icons.upload_file),
-      label: Text('파일 업로드'),
+      label: Text('업로드'),
     ),
     NavigationRailDestination(
-      icon: Icon(Icons.table_chart),
+      icon: Icon(Icons.preview),
       label: Text('미리보기'),
     ),
   ];
 
+  void _handleRefinedData(List<Map<String, dynamic>> data) {
+    setState(() {
+      _refinedData = data;
+      _selectedIndex = 1; // 자동으로 미리보기 탭으로 전환
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    final List<Widget> pages = [
+      UploadPage(onRefinedData: _handleRefinedData),
+      PreviewPage(data: _refinedData),
+    ];
+
     return Scaffold(
       body: Row(
         children: [
-          // ✅ Sidebar with title + NavigationRail
+          /// ✅ Sidebar
           Container(
             width: 220,
-            color: Colors.grey[100],
+            color: const Color(0xFF1E1E2D),
             child: Column(
               children: [
-                const SizedBox(height: 24),
+                const SizedBox(height: 40),
                 const Text(
-                  '📊 Sheetflow',
+                  '📊 SheetFlow',
                   style: TextStyle(
-                    fontSize: 22,
+                    fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.indigo,
+                    color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Divider(thickness: 1),
+                const SizedBox(height: 20),
+                const Divider(color: Colors.white24),
                 Expanded(
                   child: NavigationRail(
+                    backgroundColor: const Color(0xFF1E1E2D),
                     selectedIndex: _selectedIndex,
                     onDestinationSelected: (index) {
                       setState(() => _selectedIndex = index);
                     },
-                    destinations: _destinations,
                     labelType: NavigationRailLabelType.all,
-                    selectedIconTheme: const IconThemeData(color: Colors.indigo),
-                    unselectedIconTheme: const IconThemeData(color: Colors.grey),
-                    selectedLabelTextStyle: const TextStyle(color: Colors.indigo),
-                    backgroundColor: Colors.grey[100],
+                    selectedIconTheme: const IconThemeData(color: Colors.white),
+                    unselectedIconTheme: const IconThemeData(color: Colors.white38),
+                    selectedLabelTextStyle: const TextStyle(color: Colors.white),
+                    unselectedLabelTextStyle: const TextStyle(color: Colors.white70),
+                    destinations: _destinations,
                   ),
                 ),
+                const SizedBox(height: 20),
+                const Text(
+                  '© 2025 SheetFlow',
+                  style: TextStyle(fontSize: 12, color: Colors.white38),
+                ),
+                const SizedBox(height: 16),
               ],
             ),
           ),
-          const VerticalDivider(width: 1),
+
+          /// ✅ Main Area
           Expanded(
-            child: _selectedIndex == null
-                ? const Center(
-                    child: Text(
-                      '왼쪽 메뉴에서 기능을 선택해주세요.',
-                      style: TextStyle(fontSize: 18, color: Colors.grey),
-                    ),
-                  )
-                : _pages[_selectedIndex!],
+            child: Scaffold(
+              backgroundColor: const Color(0xFFF6F8FA),
+              appBar: TopBar(title: _titles[_selectedIndex]),
+              body: pages[_selectedIndex],
+            ),
           ),
         ],
       ),
