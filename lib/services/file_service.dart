@@ -9,7 +9,8 @@ class FileService {
 
   static Future<Map<String, dynamic>?> uploadExcelFile(File file) async {
     try {
-      final uri = Uri.parse('$_baseUrl/upload');
+      // ✅ 슬래시(/) 추가로 리디렉션 방지
+      final uri = Uri.parse('$_baseUrl/upload/');
 
       final request = http.MultipartRequest('POST', uri)
         ..files.add(
