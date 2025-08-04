@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:intl/intl.dart';
 import 'dart:io';
 import '../services/file_service.dart';
 import '../widgets/summary_card.dart';
@@ -17,6 +19,7 @@ class _UploadPageState extends State<UploadPage> {
   String? _statusMessage;
   Map<String, dynamic>? _analysisResult;
   List<dynamic>? _groupedResult;
+  List<dynamic>? _sortedPreview;
 
   Future<void> _pickExcelFile() async {
     final result = await FilePicker.platform.pickFiles(
@@ -30,6 +33,7 @@ class _UploadPageState extends State<UploadPage> {
         _statusMessage = null;
         _analysisResult = null;
         _groupedResult = null;
+        _sortedPreview = null;
       });
     }
   }
@@ -41,6 +45,7 @@ class _UploadPageState extends State<UploadPage> {
       _statusMessage = '업로드 중';
       _analysisResult = null;
       _groupedResult = null;
+      _sortedPreview = null;
     });
 
     final result = await FileService.uploadExcelFile(_selectedFile!);
@@ -60,6 +65,68 @@ class _UploadPageState extends State<UploadPage> {
       }
       _groupedResult = grouped;
     });
+  }
+
+  Future<void> _sortData() async {
+    if (_selectedFile == null) {
+      setState(() {
+        _statusMessage = '⚠️ 파일을 먼저 선택하세요';
+      });
+      return;
+    }
+
+    setState(() {
+      _statusMessage = '정렬 중...';
+      _sortedPreview = null;
+    });
+
+    final result = await FileService.sortExcelFile(_selectedFile!);
+
+    setState(() {
+      if (result != null && result['sorted_preview'] != null) {
+        _sortedPreview = result['sorted_preview'];
+        _statusMessage = '✅ 정렬 완료';
+      } else {
+        _statusMessage = '❌ 정렬 실패';
+      }
+    });
+  }
+
+  Future<void> _generateFile() async {
+    if (_selectedFile == null) {
+      setState(() {
+        _statusMessage = '⚠️ 파일을 먼저 선택하세요';
+      });
+      return;
+    }
+
+    setState(() {
+      _statusMessage = '파일 생성 중...';
+    });
+
+    final fileBytes = await FileService.generateExcelFile(_selectedFile!);
+    if (fileBytes != null) {
+      final downloadsDir = await getDownloadsDirectory();
+      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+      final savePath = '${downloadsDir!.path}/sorted_serials_$timestamp.xlsx';
+
+      final file = File(savePath);
+      await file.writeAsBytes(fileBytes);
+
+      setState(() {
+        _statusMessage = '✅ 파일 생성 완료';
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('파일이 다운로드 폴더에 저장되었습니다.\n$savePath')),
+        );
+      }
+    } else {
+      setState(() {
+        _statusMessage = '❌ 파일 생성 실패';
+      });
+    }
   }
 
   @override
@@ -118,7 +185,7 @@ class _UploadPageState extends State<UploadPage> {
               _buildCard(
                 width: 196,
                 title: "파일 선택",
-                icon: Icons.folder_open,
+                buttonText: "선택",
                 tooltip: "엑셀 파일 선택",
                 onPressed: _pickExcelFile,
                 footer: _selectedFile != null
@@ -128,7 +195,7 @@ class _UploadPageState extends State<UploadPage> {
               _buildCard(
                 width: 196,
                 title: "분석 실행",
-                icon: Icons.upload_file,
+                buttonText: "실행",
                 tooltip: "파일 업로드 및 분석",
                 onPressed: _uploadFile,
                 footer: _statusMessage ?? "분석을 시작하세요",
@@ -139,18 +206,18 @@ class _UploadPageState extends State<UploadPage> {
               _buildCard(
                 width: 196,
                 title: "정렬 실행",
-                icon: Icons.sort,
-                tooltip: "정렬 기능 준비 중",
-                onPressed: null,
-                footer: "📍 정렬 기능 준비 중",
+                buttonText: "실행",
+                tooltip: "데이터 정렬",
+                onPressed: _sortData,
+                footer: "데이터 정렬 실행",
               ),
               _buildCard(
                 width: 196,
                 title: "파일 생성",
-                icon: Icons.download,
-                tooltip: "파일 다운로드 준비 중",
-                onPressed: null,
-                footer: "📁 파일 다운로드 준비 중",
+                buttonText: "생성",
+                tooltip: "정렬된 파일 다운로드",
+                onPressed: _generateFile,
+                footer: "엑셀 파일 다운로드",
               ),
             ],
           ),
@@ -179,6 +246,28 @@ class _UploadPageState extends State<UploadPage> {
               )
             else
               const Text("⚠️ 미리볼 중복 항목이 없습니다."),
+          ],
+
+          if (_sortedPreview != null) ...[
+            const SizedBox(height: 32),
+            const Text("📑 정렬 미리보기", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Card(
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _sortedPreview!.length,
+                separatorBuilder: (_, __) => const Divider(height: 1),
+                itemBuilder: (context, index) {
+                  final row = _sortedPreview![index];
+                  return ListTile(
+                    title: Text(row.toString()),
+                    dense: true,
+                    tileColor: index % 2 == 0 ? Colors.grey.shade50 : Colors.transparent,
+                  );
+                },
+              ),
+            ),
           ],
 
           const SizedBox(height: 32),
@@ -211,7 +300,7 @@ class _UploadPageState extends State<UploadPage> {
   Widget _buildCard({
     required double width,
     required String title,
-    required IconData icon,
+    required String buttonText,
     required String tooltip,
     required VoidCallback? onPressed,
     String? footer,
@@ -241,7 +330,7 @@ class _UploadPageState extends State<UploadPage> {
                   child: ElevatedButton(
                     onPressed: onPressed,
                     style: ElevatedButton.styleFrom(
-                      fixedSize: const Size(64, 64),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                       backgroundColor: Colors.indigo,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
@@ -249,7 +338,10 @@ class _UploadPageState extends State<UploadPage> {
                       ),
                       elevation: 2,
                     ),
-                    child: Icon(icon, size: 28),
+                    child: Text(
+                      buttonText,
+                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
                   ),
                 ),
               ),
