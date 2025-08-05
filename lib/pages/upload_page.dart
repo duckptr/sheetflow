@@ -156,13 +156,11 @@ class _UploadPageState extends State<UploadPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Wrap(
-            alignment: WrapAlignment.center,
-            spacing: 0,
-            runSpacing: 16,
+          /// 📌 상단 카드 Row 균등 배치
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              SizedBox(
-                width: 260,
+              Expanded(
                 child: SummaryCard(
                   title: '전체 행 수',
                   value: _analysisResult?['total_rows']?.toString() ?? '-',
@@ -170,9 +168,8 @@ class _UploadPageState extends State<UploadPage> {
                   color: Colors.indigo,
                 ),
               ),
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 12),
-                width: 260,
+              const SizedBox(width: 16),
+              Expanded(
                 child: SummaryCard(
                   title: '중복 행 수',
                   value: _analysisResult?['duplicated_rows']?.toString() ?? '-',
@@ -180,8 +177,8 @@ class _UploadPageState extends State<UploadPage> {
                   color: Colors.orange,
                 ),
               ),
-              SizedBox(
-                width: 260,
+              const SizedBox(width: 16),
+              Expanded(
                 child: SummaryCard(
                   title: '분석 상태',
                   value: _getStatusShortText(),
@@ -194,50 +191,58 @@ class _UploadPageState extends State<UploadPage> {
 
           const SizedBox(height: 32),
 
-          Wrap(
-            spacing: 16,
-            runSpacing: 16,
+          /// 📌 버튼 카드 Row 균등 배치
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              _buildCard(
-                width: 196,
-                title: "파일 선택",
-                buttonText: "선택",
-                tooltip: "엑셀 파일 선택",
-                onPressed: _pickExcelFile,
-                footer: _selectedFile != null
-                    ? _selectedFile!.path.split(Platform.pathSeparator).last
-                    : "엑셀 파일을 선택하세요",
+              Expanded(
+                child: _buildCard(
+                  title: "파일 선택",
+                  buttonText: "선택",
+                  tooltip: "엑셀 파일 선택",
+                  onPressed: _pickExcelFile,
+                  footer: _selectedFile != null
+                      ? _selectedFile!.path.split(Platform.pathSeparator).last
+                      : "엑셀 파일을 선택하세요",
+                ),
               ),
-              _buildCard(
-                width: 196,
-                title: "분석 실행",
-                buttonText: "실행",
-                tooltip: "파일 업로드 및 분석",
-                onPressed: _uploadFile,
-                footer: _statusMessage ?? "분석을 시작하세요",
-                footerColor: _getStatusColor(),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildCard(
+                  title: "분석 실행",
+                  buttonText: "실행",
+                  tooltip: "파일 업로드 및 분석",
+                  onPressed: _uploadFile,
+                  footer: _statusMessage ?? "분석을 시작하세요",
+                  footerColor: _getStatusColor(),
+                ),
               ),
-              _buildCard(
-                width: 196,
-                title: "정렬 실행",
-                buttonText: "실행",
-                tooltip: "데이터 정렬",
-                onPressed: _sortData,
-                footer: "데이터 정렬 실행",
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildCard(
+                  title: "정렬 실행",
+                  buttonText: "실행",
+                  tooltip: "데이터 정렬",
+                  onPressed: _sortData,
+                  footer: "데이터 정렬 실행",
+                ),
               ),
-              _buildCard(
-                width: 196,
-                title: "파일 생성",
-                buttonText: "생성",
-                tooltip: "정렬된 파일 다운로드",
-                onPressed: _generateFile,
-                footer: "엑셀 파일 다운로드",
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildCard(
+                  title: "파일 생성",
+                  buttonText: "생성",
+                  tooltip: "정렬된 파일 다운로드",
+                  onPressed: _generateFile,
+                  footer: "엑셀 파일 다운로드",
+                ),
               ),
             ],
           ),
 
           const SizedBox(height: 32),
 
+          /// 📌 중복 미리보기
           if (_analysisResult != null) ...[
             const Text("🧾 중복 미리보기", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
@@ -262,6 +267,7 @@ class _UploadPageState extends State<UploadPage> {
               const Text("⚠️ 미리볼 중복 항목이 없습니다."),
           ],
 
+          /// 📌 정렬 미리보기
           if (_sortedPreview != null) ...[
             const SizedBox(height: 32),
             const Text("📑 정렬 미리보기", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
@@ -284,8 +290,8 @@ class _UploadPageState extends State<UploadPage> {
             ),
           ],
 
+          /// 📌 제품코드별 시리얼 추적
           const SizedBox(height: 32),
-
           if (_groupedResult != null && _groupedResult!.isNotEmpty) ...[
             const Text("📦 제품코드별 시리얼 추적", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
@@ -312,7 +318,6 @@ class _UploadPageState extends State<UploadPage> {
   }
 
   Widget _buildCard({
-    required double width,
     required String title,
     required String buttonText,
     required String tooltip,
@@ -320,59 +325,56 @@ class _UploadPageState extends State<UploadPage> {
     String? footer,
     Color? footerColor,
   }) {
-    return SizedBox(
-      width: width,
-      child: Card(
-        elevation: 4,
-        color: Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          constraints: const BoxConstraints(minHeight: 180),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+    return Card(
+      elevation: 6,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        constraints: const BoxConstraints(minHeight: 180),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              title,
+              style: const TextStyle(fontWeight: FontWeight.bold),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Center(
+              child: Tooltip(
+                message: tooltip,
+                child: ElevatedButton(
+                  onPressed: onPressed,
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    backgroundColor: Colors.indigo,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 2,
+                  ),
+                  child: Text(
+                    buttonText,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (footer != null)
               Text(
-                title,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                footer,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: footerColor ?? Colors.black54,
+                ),
                 textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
-              const SizedBox(height: 16),
-              Center(
-                child: Tooltip(
-                  message: tooltip,
-                  child: ElevatedButton(
-                    onPressed: onPressed,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                      backgroundColor: Colors.indigo,
-                      foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      elevation: 2,
-                    ),
-                    child: Text(
-                      buttonText,
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              if (footer != null)
-                Text(
-                  footer,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: footerColor ?? Colors.black54,
-                  ),
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
-                ),
-            ],
-          ),
+          ],
         ),
       ),
     );

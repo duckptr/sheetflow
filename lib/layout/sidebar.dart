@@ -13,7 +13,7 @@ class Sidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 250, 
+      width: 240, 
       color: const Color(0xFF1E1E2D),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
