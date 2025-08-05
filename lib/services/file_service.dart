@@ -4,8 +4,8 @@ import 'package:http/http.dart' as http;
 import 'package:path/path.dart';
 
 class FileService {
-  // ⛳️ FastAPI 서버 주소
-  static const String _baseUrl = 'http://10.1.25.127:8000'; // 필요 시 변경
+  // ✅ FastAPI 서버 주소 (로컬 백엔드 exe 기준)
+  static const String _baseUrl = 'http://127.0.0.1:8000';
 
   /// 📌 엑셀 업로드 및 중복 분석 결과 받기
   static Future<Map<String, dynamic>?> uploadExcelFile(File file) async {
@@ -65,10 +65,10 @@ class FileService {
     return null;
   }
 
-  /// 📌 정렬 기능 API 호출
+  /// 📌 정렬 기능 API 호출 (프리뷰)
   static Future<Map<String, dynamic>?> sortExcelFile(File file) async {
     try {
-      final uri = Uri.parse('$_baseUrl/sort/sort_excel');
+      final uri = Uri.parse('$_baseUrl/sort/sort_excel'); // API 경로 확인 필요
 
       final request = http.MultipartRequest('POST', uri)
         ..files.add(
