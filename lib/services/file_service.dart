@@ -68,7 +68,7 @@ class FileService {
   /// 📌 정렬 기능 API 호출 (프리뷰)
   static Future<Map<String, dynamic>?> sortExcelFile(File file) async {
     try {
-      final uri = Uri.parse('$_baseUrl/sort/sort_excel'); // API 경로 확인 필요
+      final uri = Uri.parse('$_baseUrl/sort/sort_excel');
 
       final request = http.MultipartRequest('POST', uri)
         ..files.add(
@@ -84,7 +84,7 @@ class FileService {
       if (response.statusCode == 200) {
         final respStr = await response.stream.bytesToString();
         final jsonData = json.decode(respStr);
-        return jsonData; // { "sorted_preview": [...] }
+        return jsonData;
       } else {
         print('❌ 정렬 실패: ${response.statusCode}');
       }
@@ -111,13 +111,45 @@ class FileService {
       final response = await request.send();
 
       if (response.statusCode == 200) {
-        // 바이너리 데이터(엑셀 파일)
         return await response.stream.toBytes();
       } else {
         print('❌ 파일 생성 실패: ${response.statusCode}');
       }
     } catch (e) {
       print('🚨 파일 생성 요청 오류: $e');
+    }
+    return null;
+  }
+
+  /// 📊 통계 분석 (조건 필터 포함 가능)
+  static Future<Map<String, dynamic>?> analyzeExcelFile(File file, {Map<String, dynamic>? filters}) async {
+    try {
+      final uri = Uri.parse('$_baseUrl/analyze/analyze_excel');
+
+      final request = http.MultipartRequest('POST', uri)
+        ..files.add(
+          await http.MultipartFile.fromPath(
+            'file',
+            file.path,
+            filename: basename(file.path),
+          ),
+        );
+
+      if (filters != null && filters.isNotEmpty) {
+        request.fields['filters'] = jsonEncode(filters);
+      }
+
+      final response = await request.send();
+
+      if (response.statusCode == 200) {
+        final respStr = await response.stream.bytesToString();
+        final jsonData = json.decode(respStr);
+        return jsonData['stats'];
+      } else {
+        print('❌ 분석 실패: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('🚨 분석 요청 오류: $e');
     }
     return null;
   }

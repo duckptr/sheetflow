@@ -1,382 +1,333 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:intl/intl.dart';
 import 'dart:io';
-import '../services/file_service.dart';
-import '../widgets/summary_card.dart';
+import 'package:intl/intl.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:fl_chart/fl_chart.dart';
 
 class UploadPage extends StatefulWidget {
-  final void Function(List<Map<String, dynamic>>)? onRefinedData;
-  const UploadPage({super.key, this.onRefinedData});
+  const UploadPage({Key? key}) : super(key: key);
 
   @override
   State<UploadPage> createState() => _UploadPageState();
 }
 
 class _UploadPageState extends State<UploadPage> {
-  File? _selectedFile;
-  String? _statusMessage;
-  Map<String, dynamic>? _analysisResult;
-  List<dynamic>? _groupedResult;
-  List<dynamic>? _sortedPreview;
+  // 파일 처리 상태
+  String? _processStatus;
+  // 통계 처리 상태
+  String? _statsStatus;
 
-  Future<void> _pickExcelFile() async {
+  // 파일 처리 결과 저장
+  List<Map<String, dynamic>> _analyses = [];
+
+  // 통계 데이터 저장
+  List<dynamic>? _statsData;
+  String? _statsFileName;
+
+  Future<Map<String, dynamic>?> _analyzeExcel(File file) async {
+    final uri = Uri.parse('http://localhost:8000/analyze/analyze_excel');
+    final req = http.MultipartRequest('POST', uri);
+    req.files.add(await http.MultipartFile.fromPath('file', file.path));
+    final res = await req.send();
+    if (res.statusCode == 200) {
+      final body = await res.stream.bytesToString();
+      return json.decode(body) as Map<String, dynamic>;
+    }
+    return null;
+  }
+
+  // 1. 파일 처리: 정렬, 중복 확인
+  Future<void> _processFiles() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['xlsx', 'xls'],
+      allowMultiple: true,
     );
+    if (result != null) {
+      setState(() => _processStatus = '처리 중...');
+      _analyses.clear();
+      for (var f in result.files) {
+        if (f.path == null) continue;
+        final resp = await _analyzeExcel(File(f.path!));
+        if (resp != null) {
+          final stats = resp['product_stats'] is List<dynamic>
+              ? resp['product_stats'] as List<dynamic>
+              : <dynamic>[];
+          _analyses.add({
+            'fileName': f.name,
+            'filePath': f.path!,
+            'product_stats': stats,
+          });
+        }
+      }
+      setState(() {
+        _processStatus = _analyses.isNotEmpty ? '완료' : '실패';
+      });
+    }
+  }
 
+  // 2. 통계 업로드: 차트용 데이터
+  Future<void> _uploadStats() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['xlsx', 'xls'],
+      allowMultiple: false,
+    );
     if (result != null && result.files.single.path != null) {
       setState(() {
-        _selectedFile = File(result.files.single.path!);
-        _statusMessage = null;
-        _analysisResult = null;
-        _groupedResult = null;
-        _sortedPreview = null;
+        _statsStatus = '분석 중...';
+        _statsFileName = result.files.single.name;
       });
-    }
-  }
-
-  Future<void> _uploadFile() async {
-    if (_selectedFile == null) return;
-
-    setState(() {
-      _statusMessage = '업로드 중';
-      _analysisResult = null;
-      _groupedResult = null;
-      _sortedPreview = null;
-    });
-
-    final result = await FileService.uploadExcelFile(_selectedFile!);
-    final grouped = await FileService.groupSerials(_selectedFile!);
-
-    setState(() {
-      if (result != null) {
-        _statusMessage = '✅ 업로드 및 분석 완료';
-        _analysisResult = result;
-
-        final previewList = result['preview'];
-        if (previewList is List && widget.onRefinedData != null) {
-          widget.onRefinedData!(List<Map<String, dynamic>>.from(previewList));
+      final resp = await _analyzeExcel(File(result.files.single.path!));
+      setState(() {
+        if (resp != null && resp['product_stats'] is List<dynamic>) {
+          _statsData = resp['product_stats'] as List<dynamic>;
+          _statsStatus = '통계 완료';
+        } else {
+          _statsData = null;
+          _statsStatus = '통계 실패';
         }
-      } else {
-        _statusMessage = '❌ 업로드 실패';
-      }
-      _groupedResult = grouped;
-    });
-  }
-
-  Future<void> _sortData() async {
-    if (_selectedFile == null) {
-      setState(() {
-        _statusMessage = '⚠️ 파일을 먼저 선택하세요';
-      });
-      return;
-    }
-
-    setState(() {
-      _statusMessage = '정렬 중';
-      _sortedPreview = null;
-    });
-
-    final result = await FileService.sortExcelFile(_selectedFile!);
-
-    setState(() {
-      if (result != null && result['sorted_preview'] != null) {
-        _sortedPreview = result['sorted_preview'];
-        _statusMessage = '✅ 정렬 완료';
-      } else {
-        _statusMessage = '❌ 정렬 실패';
-      }
-    });
-  }
-
-  Future<void> _generateFile() async {
-    if (_selectedFile == null) {
-      setState(() {
-        _statusMessage = '⚠️ 파일을 먼저 선택하세요';
-      });
-      return;
-    }
-
-    setState(() {
-      _statusMessage = '파일 생성 중';
-    });
-
-    final fileBytes = await FileService.generateExcelFile(_selectedFile!);
-    if (fileBytes != null) {
-      final downloadsDir = await getDownloadsDirectory();
-      final timestamp = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
-      final savePath = '${downloadsDir!.path}/sorted_serials_$timestamp.xlsx';
-
-      final file = File(savePath);
-      await file.writeAsBytes(fileBytes);
-
-      setState(() {
-        _statusMessage = '✅ 파일 생성 완료';
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('파일이 다운로드 폴더에 저장되었습니다.\n$savePath')),
-        );
-      }
-    } else {
-      setState(() {
-        _statusMessage = '❌ 파일 생성 실패';
       });
     }
   }
 
-  /// 📌 상태 표시 텍스트 간소화
-  String _getStatusShortText() {
-    if (_statusMessage == null) return '대기';
-    if (_statusMessage!.contains('중')) return '진행 중';
-    if (_statusMessage!.startsWith('✅')) return '완료';
-    if (_statusMessage!.startsWith('❌')) return '실패';
-    return '대기';
+  // 3. 처리 결과 다운로드: Downloads 폴더 저장
+  Future<void> _downloadResults() async {
+    if (_analyses.isEmpty) return;
+    setState(() => _processStatus = '다운로드 중...');
+    final downloadsDir = Directory('${Platform.environment['USERPROFILE']}\\Downloads');
+    final List<String> saved = [];
+    for (var a in _analyses) {
+      final path = a['filePath'] as String;
+      final uri = Uri.parse('http://localhost:8000/analyze/download_result');
+      final req = http.MultipartRequest('POST', uri);
+      req.files.add(await http.MultipartFile.fromPath('file', path));
+      final res = await req.send();
+      if (res.statusCode == 200) {
+        final bytes = await res.stream.toBytes();
+        final ts = DateFormat('yyyyMMdd_HHmmss').format(DateTime.now());
+        final savePath = '${downloadsDir.path}\\${a['fileName']}_$ts.xlsx';
+        await File(savePath).writeAsBytes(bytes);
+        saved.add(savePath);
+      }
+    }
+    setState(() => _processStatus = saved.isNotEmpty ? '다운로드 완료' : '다운로드 실패');
+    if (saved.isNotEmpty && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('다운로드: ${saved.join(', ')}')),
+      );
+    }
   }
 
-  /// 📌 상태별 색상 반환
-  Color _getStatusColor() {
-    if (_statusMessage == null) return Colors.grey;
-    if (_statusMessage!.contains('중')) return Colors.blue;
-    if (_statusMessage!.startsWith('✅')) return Colors.green;
-    if (_statusMessage!.startsWith('❌')) return Colors.red;
+  Color _statusColor(String? status) {
+    if (status == null) return Colors.grey;
+    if (status.contains('중')) return Colors.blue;
+    if (status.contains('완료')) return Colors.green;
+    if (status.contains('실패')) return Colors.red;
     return Colors.grey;
   }
 
   @override
   Widget build(BuildContext context) {
-    final previewList = _analysisResult?['preview'];
-
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
+      padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          /// 📌 상단 카드 Row 균등 배치
+          _buildSearchHeader(),
+          const SizedBox(height: 24),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: SummaryCard(
-                  title: '전체 행 수',
-                  value: _analysisResult?['total_rows']?.toString() ?? '-',
-                  icon: Icons.table_rows,
-                  color: Colors.indigo,
-                ),
-              ),
+              _buildProcessCard(),
               const SizedBox(width: 16),
-              Expanded(
-                child: SummaryCard(
-                  title: '중복 행 수',
-                  value: _analysisResult?['duplicated_rows']?.toString() ?? '-',
-                  icon: Icons.warning_amber_rounded,
-                  color: Colors.orange,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: SummaryCard(
-                  title: '분석 상태',
-                  value: _getStatusShortText(),
-                  icon: Icons.check_circle,
-                  color: _getStatusColor(),
-                ),
-              ),
+              _buildStatsCard(),
             ],
           ),
-
-          const SizedBox(height: 32),
-
-          /// 📌 버튼 카드 Row 균등 배치
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(
-                child: _buildCard(
-                  title: "파일 선택",
-                  buttonText: "선택",
-                  tooltip: "엑셀 파일 선택",
-                  onPressed: _pickExcelFile,
-                  footer: _selectedFile != null
-                      ? _selectedFile!.path.split(Platform.pathSeparator).last
-                      : "엑셀 파일을 선택하세요",
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildCard(
-                  title: "분석 실행",
-                  buttonText: "실행",
-                  tooltip: "파일 업로드 및 분석",
-                  onPressed: _uploadFile,
-                  footer: _statusMessage ?? "분석을 시작하세요",
-                  footerColor: _getStatusColor(),
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildCard(
-                  title: "정렬 실행",
-                  buttonText: "실행",
-                  tooltip: "데이터 정렬",
-                  onPressed: _sortData,
-                  footer: "데이터 정렬 실행",
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: _buildCard(
-                  title: "파일 생성",
-                  buttonText: "생성",
-                  tooltip: "정렬된 파일 다운로드",
-                  onPressed: _generateFile,
-                  footer: "엑셀 파일 다운로드",
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 32),
-
-          /// 📌 중복 미리보기
-          if (_analysisResult != null) ...[
-            const Text("🧾 중복 미리보기", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            if (previewList != null && previewList.isNotEmpty)
-              Card(
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: previewList.length,
-                  separatorBuilder: (_, __) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final row = previewList[index];
-                    return ListTile(
-                      title: Text(row.toString()),
-                      dense: true,
-                      tileColor: index % 2 == 0 ? Colors.grey.shade50 : Colors.transparent,
-                    );
-                  },
-                ),
-              )
-            else
-              const Text("⚠️ 미리볼 중복 항목이 없습니다."),
-          ],
-
-          /// 📌 정렬 미리보기
-          if (_sortedPreview != null) ...[
+          if (_statsData != null) ...[
             const SizedBox(height: 32),
-            const Text("📑 정렬 미리보기", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            Card(
-              child: ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: _sortedPreview!.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final row = _sortedPreview![index];
-                  return ListTile(
-                    title: Text(row.toString()),
-                    dense: true,
-                    tileColor: index % 2 == 0 ? Colors.grey.shade50 : Colors.transparent,
-                  );
-                },
-              ),
-            ),
-          ],
-
-          /// 📌 제품코드별 시리얼 추적
-          const SizedBox(height: 32),
-          if (_groupedResult != null && _groupedResult!.isNotEmpty) ...[
-            const Text("📦 제품코드별 시리얼 추적", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 12),
-            ..._groupedResult!.map<Widget>((group) {
-              return Card(
-                margin: const EdgeInsets.symmetric(vertical: 6),
-                elevation: 1.5,
-                child: ExpansionTile(
-                  title: Text("제품코드: ${group['product_code']}"),
-                  children: (group['serial_logs'] as List).map<Widget>((log) {
-                    return ListTile(
-                      title: Text("testdate: ${log['test_date']} | shipdate: ${log['ship_date']}"),
-                      subtitle: Text("시리얼: ${log['serial_start']} ~ ${log['serial_end']}"),
-                      dense: true,
-                    );
-                  }).toList(),
-                ),
-              );
-            }).toList(),
+            _buildCharts(_statsData!, _statsFileName!),
           ],
         ],
       ),
     );
   }
 
-  Widget _buildCard({
-    required String title,
-    required String buttonText,
-    required String tooltip,
-    required VoidCallback? onPressed,
-    String? footer,
-    Color? footerColor,
-  }) {
-    return Card(
-      elevation: 6,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        constraints: const BoxConstraints(minHeight: 180),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildSearchHeader() => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade200,
+          borderRadius: BorderRadius.circular(32),
+        ),
+        child: Row(
           children: [
-            Text(
-              title,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            Center(
-              child: Tooltip(
-                message: tooltip,
-                child: ElevatedButton(
-                  onPressed: onPressed,
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                    backgroundColor: Colors.indigo,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    elevation: 2,
-                  ),
-                  child: Text(
-                    buttonText,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
+            const Icon(Icons.search, color: Colors.grey),
+            const SizedBox(width: 12),
+            Expanded(
+              child: TextField(
+                decoration: const InputDecoration.collapsed(
+                    hintText: '제품코드를 검색하세요'),
+                onChanged: (_) => setState(() {}),
               ),
             ),
-            const SizedBox(height: 16),
-            if (footer != null)
-              Text(
-                footer,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: footerColor ?? Colors.black54,
-                ),
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
-              ),
           ],
         ),
-      ),
-    );
-  }
+      );
+
+  Widget _buildProcessCard() => Card(
+        elevation: 6,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('파일 업로드', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: _processFiles,
+                child: const Text('파일 선택 및 처리'),
+              ),
+              const SizedBox(height: 8),
+              if (_processStatus != null)
+                Text('상태: $_processStatus', style: TextStyle(color: _statusColor(_processStatus))),
+              if (_analyses.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                ElevatedButton(
+                  onPressed: _downloadResults,
+                  child: const Text('다운로드'),
+                ),
+              ],
+            ],
+          ),
+        ),
+      );
+
+  Widget _buildStatsCard() => Card(
+        elevation: 6,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('통계 업로드', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 12),
+              ElevatedButton(
+                onPressed: _uploadStats,
+                child: const Text('통계 파일 선택'),
+              ),
+              const SizedBox(height: 8),
+              if (_statsStatus != null)
+                Text('상태: $_statsStatus', style: TextStyle(color: _statusColor(_statsStatus))),
+            ],
+          ),
+        ),
+      );
+
+  Widget _buildCharts(List<dynamic> data, String fileName) => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(fileName, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          // 수율 차트
+          LineChart(
+            LineChartData(
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
+                bottomTitles: AxisTitles(sideTitles: SideTitles(
+                  showTitles: true,
+                  getTitlesWidget: (v, _) {
+                    final i = v.toInt();
+                    return i < data.length ? Text(data[i]['product_code']) : const Text('');
+                  },
+                )),
+              ),
+              lineBarsData: [
+                LineChartBarData(
+                  isCurved: true,
+                  spots: List.generate(data.length,
+                      (i) => FlSpot(i.toDouble(), (data[i]['ship_rate'] as num).toDouble())),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          // 불량률 차트
+          LineChart(
+            LineChartData(
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
+                bottomTitles: AxisTitles(sideTitles: SideTitles(
+                  showTitles: true,
+                  getTitlesWidget: (v, _) {
+                    final i = v.toInt();
+                    return i < data.length ? Text(data[i]['product_code']) : const Text('');
+                  },
+                )),
+              ),
+              lineBarsData: [
+                LineChartBarData(
+                  isCurved: true,
+                  spots: List.generate(data.length,
+                      (i) => FlSpot(i.toDouble(), 100 - (data[i]['ship_rate'] as num).toDouble())),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          // 불량 수량 차트
+          BarChart(
+            BarChartData(
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
+                bottomTitles: AxisTitles(sideTitles: SideTitles(
+                  showTitles: true,
+                  getTitlesWidget: (v, _) {
+                    final i = v.toInt();
+                    return i < data.length ? Text(data[i]['product_code']) : const Text('');
+                  },
+                )),
+              ),
+              barGroups: List.generate(data.length, (i) {
+                final total = data[i]['testedqty'] as int;
+                final good = data[i]['goodqty'] as int;
+                return BarChartGroupData(
+                  x: i,
+                  barRods: [
+                    BarChartRodData(
+                      toY: (total - good).toDouble(),
+                    ),
+                  ],
+                );
+              }),
+            ),
+          ),
+          const SizedBox(height: 24),
+          // 판매 수량 차트
+          BarChart(
+            BarChartData(
+              titlesData: FlTitlesData(
+                leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true)),
+                bottomTitles: AxisTitles(sideTitles: SideTitles(
+                  showTitles: true,
+                  getTitlesWidget: (v, _) {
+                    final i = v.toInt();
+                    return i < data.length ? Text(data[i]['product_code']) : const Text('');
+                  },
+                )),
+              ),
+              barGroups: List.generate(data.length, (i) {
+                final good = data[i]['goodqty'] as int;
+                return BarChartGroupData(
+                  x: i,
+                  barRods: [BarChartRodData(toY: good.toDouble())],
+                );
+              }),
+            ),
+          ),
+        ],
+      );
 }

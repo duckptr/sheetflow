@@ -13,13 +13,13 @@ Future<bool> waitForBackendReady() async {
     try {
       final res = await http
           .get(Uri.parse('http://127.0.0.1:8000/docs'))
-          .timeout(Duration(seconds: 1));
+          .timeout(const Duration(seconds: 1));
       if (res.statusCode == 200) {
         print('백엔드 준비 완료!');
         return true;
       }
     } catch (_) {}
-    await Future.delayed(Duration(seconds: 1));
+    await Future.delayed(const Duration(seconds: 1));
     print('백엔드 준비 중... (${i + 1}초)');
   }
   return false;
@@ -28,7 +28,7 @@ Future<bool> waitForBackendReady() async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // ✅ sheetflow.exe가 있는 폴더에서 sheetflow_backend.exe 실행
+  // 백엔드 exe 경로
   try {
     final exeDir = File(Platform.resolvedExecutable).parent.path;
     final backendPath = p.join(exeDir, 'sheetflow_backend.exe');
@@ -36,8 +36,6 @@ void main() async {
     if (File(backendPath).existsSync()) {
       _backendProcess = await Process.start(backendPath, []);
       print('백엔드 실행 성공: $backendPath');
-
-      // ✅ 백엔드 준비 대기
       final ready = await waitForBackendReady();
       if (!ready) {
         print('⚠ 백엔드 준비 실패 - 앱 종료');
@@ -50,7 +48,7 @@ void main() async {
     print('백엔드 실행 실패: $e');
   }
 
-  // 데스크탑 환경에서만 창 크기 고정
+  // 데스크탑 창 크기 고정
   if (Platform.isWindows || Platform.isMacOS || Platform.isLinux) {
     const windowSize = Size(1150, 800);
     setWindowTitle('SheetFlow');
@@ -78,7 +76,7 @@ class SheetflowApp extends StatelessWidget {
         scaffoldBackgroundColor: const Color(0xFFF6F8FA),
         fontFamily: 'JalnanGothic',
       ),
-      home: const MainLayoutWrapper(),
+      home: const AppScaffold(),
     );
   }
 }
@@ -93,13 +91,12 @@ class MainLayoutWrapper extends StatefulWidget {
 class _MainLayoutWrapperState extends State<MainLayoutWrapper> {
   @override
   void dispose() {
-    // ✅ 앱 종료 시 백엔드 프로세스 종료
     _backendProcess?.kill();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return const MainLayout();
+    return const AppScaffold();
   }
 }
